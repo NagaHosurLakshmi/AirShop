@@ -6,11 +6,18 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Enumeration;
 import org.apache.commons.io.IOUtils;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
 
 public class AirBookingServlet extends HttpServlet {
 	
@@ -25,6 +32,7 @@ public class AirBookingServlet extends HttpServlet {
         
         try {
 			if (httpRequest.getContentLength() > 0) {
+				getRootElement(httpRequest.getInputStream());				
 				String availResXml = readAvailResponseXml();
 				httpResponse.getOutputStream().write(availResXml.getBytes());
 			}
@@ -39,6 +47,34 @@ public class AirBookingServlet extends HttpServlet {
         System.out.println("-------------------------------------------");
     }
 	
+	private void getRootElement(InputStream is) {
+		 DocumentBuilderFactory dbFactory 
+         = DocumentBuilderFactory.newInstance();
+      DocumentBuilder dBuilder;
+
+      try {
+		dBuilder = dbFactory.newDocumentBuilder();
+
+		  Document doc = dBuilder.parse(is);
+		  doc.getDocumentElement().normalize();
+		  if (doc.getElementsByTagName("AirShoppingRQ") != null) {
+			  System.out.println("Airshopping");
+		  }
+		  System.out.println(doc.getDocumentElement().getNodeName());
+	} catch (ParserConfigurationException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (SAXException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+      
+      XPath xPath =  XPathFactory.newInstance().newXPath();
+
+	}
 	
 	/**
 	 * The method reads the availability response xml.
@@ -48,9 +84,30 @@ public class AirBookingServlet extends HttpServlet {
 	private String readAvailResponseXml() {
 		InputStream is = null;
 		BufferedReader buffRdr = null;
-		StringBuilder availResBldr = new StringBuilder();
+		String xmlString = null;
 		try {			
 			is = getClass().getClassLoader().getResourceAsStream("response/avail-res.xml");
+			xmlString = getXmlString(is);
+								
+		}
+		finally {			
+			if (is != null) {
+				try {
+					is.close();
+				}
+				catch (IOException ex) {
+					ex.printStackTrace();
+				}
+			}
+		}
+		return xmlString;
+	}
+	
+	private String getXmlString(InputStream is) {
+		BufferedReader buffRdr = null;
+		StringBuilder availResBldr = new StringBuilder();
+		try {			
+			
 			buffRdr = new BufferedReader(new InputStreamReader(is, "UTF-8"));
 			String line = null;
 			while ((line = buffRdr.readLine()) != null) {
@@ -67,46 +124,8 @@ public class AirBookingServlet extends HttpServlet {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
-			if (is != null) {
-				try {
-					is.close();
-				}
-				catch (IOException ex) {
-					ex.printStackTrace();
-				}
-			}
+			}			
 		}
 		return availResBldr.toString();
-	}
-	private String getString(InputStream is) {
-		
-		BufferedReader br = null;
-		StringBuilder sb = new StringBuilder();
-
-		String line;
-		try {
-
-			br = new BufferedReader(new InputStreamReader(is));
-			while ((line = br.readLine()) != null) {
-				System.out.println("Line is not null");
-				sb.append(line);
-			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		
-		System.out.println("Data: "+sb);
-		return sb.toString();
-
 	}
 }
